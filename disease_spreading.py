@@ -173,12 +173,11 @@ def static(num_steps):
 pause = False
 def gen(num_steps = 1e6):
 	i = 0
-	print len(infected_agents)
 	while len(infected_agents) > 0 and i < num_steps:
 		if not pause:
 			i += 1
 		yield i
-	yield 0
+	yield i
 	print "no more infected, or asked number of steps"
 
 def main():
