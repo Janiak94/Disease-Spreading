@@ -1,14 +1,14 @@
+#!/usr/bin/python
+
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import numpy as np
+import argparse as ap
 
-beta = 0.6
-gamma = 0.01
-d = 0.8
 length = 100
 num_agents = 1000
 
-grid = np.ndarray((length,length), dtype=list,order='C')
+grid = np.ndarray((length,length), dtype=list,order="C")
 for i in range(length):
 	for j in range(length):
 		grid[i,j] = []
@@ -16,7 +16,7 @@ agents = []
 susceptible_agents = []
 recovered_agents = []
 infected_agents = []
-fig = plt.figure()
+fig = plt.figure(figsize=(14,6),dpi=80, facecolor='w', edgecolor='k')
 ax1 = fig.add_subplot(1,2,1)
 ax2 = fig.add_subplot(1,2,2)
 num_infected = []
@@ -25,7 +25,8 @@ num_recovered = []
 time = []
 
 class Agent:
-	def __init__(self,is_infected, xpos = None, ypos = None):
+	def __init__(self, d, beta, gamma, is_infected, xpos = None, ypos = None):
+		self.d, self.beta, self.gamma = d, beta, gamma
 		if is_infected:
 			self.is_infected = True
 			self.is_recovered = False
@@ -41,7 +42,7 @@ class Agent:
 		grid[self.xpos, self.ypos].append(self)
 
 	def move(self):
-		if not d >= np.random.rand(1): return
+		if not self.d >= np.random.rand(1): return
 		grid[self.xpos, self.ypos].remove(self)
 		has_moved = False
 		while not has_moved:
@@ -64,43 +65,58 @@ class Agent:
 	def infect(self):
 		for a in grid[self.xpos, self.ypos]:
 			if not a.is_recovered and not a.is_infected:
-				if beta >= np.random.rand(1):
+				if self.beta >= np.random.rand(1):
 					a.is_infected = True
-					try:
-						infected_agents.append(a)
-						susceptible_agents.remove(a)
-					except ValueError:
-						print len(susceptible_agents)
-						pass
+					infected_agents.append(a)
+					susceptible_agents.remove(a)
 
 	def recover(self):
-		if gamma >= np.random.rand(1):
+		if self.gamma >= np.random.rand(1):
 			self.is_infected = False
 			self.is_recovered = True
 			recovered_agents.append(self)
 			infected_agents.remove(self)
 
+def on_click(event):
+	global pause
+	pause ^= True
+	if pause:
+		print "pausing"
+	else:
+		print "resuming"
+
 def animate(i):
+	if pause: return
+	fig.canvas.mpl_connect('button_press_event', on_click)
 	ax1.clear()
 	ax2.clear()
+	ax1.set_title("t=%i"%i, fontsize=20)
+	ax1.set_xticklabels("")
+	ax1.set_yticklabels("")
+	ax1.set_xlabel("x", fontsize=30)
+	ax1.set_ylabel("y", fontsize=30)
+	ax2.set_title(r"d=%.2f, $\gamma=%.2f$, $\beta$=%.2f"%(d,gamma,beta), fontsize=20)
+	ax2.set_xlabel("Time steps", fontsize=20)
+	ax2.set_ylabel("Number of agents", fontsize=20)
+	ax2.tick_params(axis='both', which='major', labelsize=12)
 	x = []
 	y = []
 	for a in susceptible_agents:
 		x.append(a.xpos)
 		y.append(a.ypos)
-	ax1.scatter(x,y,c='b')
+	ax1.scatter(x,y,c="b")
 	x = []
 	y = []
 	for a in infected_agents:
 		x.append(a.xpos)
 		y.append(a.ypos)
-	ax1.scatter(x,y,c='r')
+	ax1.scatter(x,y,c="r")
 	x = []
 	y = []
 	for a in recovered_agents:
 		x.append(a.xpos)
 		y.append(a.ypos)
-	ax1.scatter(x,y,c='g')
+	ax1.scatter(x,y,c="g")
 	ax1.set_xlim([0,length])
 	ax1.set_ylim([0,length])
 	for a in agents:
@@ -113,20 +129,92 @@ def animate(i):
 	ax2.plot(time,num_infected)
 	ax2.plot(time,num_recovered)
 
-def gen():
+def static(num_steps):
+	ax1.clear()
+	ax2.clear()
+	ax1.set_title("t=%i"%num_steps, fontsize=20)
+	ax1.set_xticklabels("")
+	ax1.set_yticklabels("")
+	ax1.set_xlabel("x", fontsize=30)
+	ax1.set_ylabel("y", fontsize=30)
+	ax2.set_title(r"d=%.2f, $\gamma=%.2f$, $\beta$=%.2f"%(d,gamma,beta), fontsize=20)
+	ax2.set_xlabel("Time steps", fontsize=20)
+	ax2.set_ylabel("Number of agents", fontsize=20)
+	ax2.tick_params(axis='both', which='major', labelsize=12)
+	x, y = [], []
+	for i in gen(num_steps):
+		time.append(i)
+		num_susceptible.append(len(susceptible_agents))
+		num_infected.append(len(infected_agents))
+		num_recovered.append(len(recovered_agents))
+		for a in agents:
+			a.move()
+	x, y = [], []
+	for a in susceptible_agents:
+		x.append(a.xpos)
+		y.append(a.ypos)
+	ax1.scatter(x,y,c="b")
+	x, y = [], []
+	for a in infected_agents:
+		x.append(a.xpos)
+		y.append(a.ypos)
+	ax1.scatter(x,y,c="r")
+	x, y = [], []
+	for a in recovered_agents:
+		x.append(a.xpos)
+		y.append(a.ypos)
+	ax1.scatter(x,y,c="g")
+	ax1.set_xlim([0,length])
+	ax1.set_ylim([0,length])
+	ax2.plot(time,num_susceptible)
+	ax2.plot(time,num_infected)
+	ax2.plot(time,num_recovered)
+
+pause = False
+def gen(num_steps = 1e6):
 	i = 0
-	while len(infected_agents) > 0:
-		i += 1
+	print len(infected_agents)
+	while len(infected_agents) > 0 and i < num_steps:
+		if not pause:
+			i += 1
 		yield i
-
-
+	yield 0
+	print "no more infected, or asked number of steps"
 
 def main():
-	for i in range(1,num_agents):
-		agents.append(Agent(False))
-	agents.append(Agent(True, int(length/2), int(length/2)))
+	print "disease spreading, -h or --help for help message"
+	parser = ap.ArgumentParser(description="disease spreading simulator")
+	parser.add_argument("-d", metavar="d", required=True, help="move probability", type=float)
+	parser.add_argument("-g", metavar="gamma", required=True, help="recovery rate", type=float)
+	parser.add_argument("-b", metavar="beta", required=True, help="infection rate", type=float)
+	parser.add_argument("-n", metavar="num_steps", help="number of time steps, if left out will animate", type=int, default="1000000")
+	args = parser.parse_args()
+	global d, gamma, beta
+	d = args.d
+	gamma = args.g
+	beta = args.b
+	num_steps = args.n
+	if d < 0 or d > 1:
+		print "invalid value of -d arg"
+		return
+	if gamma < 0 or gamma > 1:
+		print "invalid value of -g arg"
+		return
+	if beta < 0 or beta > 1:
+		print "invalid value of -b arg"
+		return
+	if num_steps < 0:
+		print "invalid value of -n arg"
+		return
 
-	ani = animation.FuncAnimation(fig, animate,frames=gen, interval=10, repeat=False)
+	for i in range(1,num_agents):
+		agents.append(Agent(d, beta, gamma, False))
+	agents.append(Agent(d, beta, gamma, True, int(length/2), int(length/2)))
+
+	if num_steps == 1e6:
+		ani = animation.FuncAnimation(fig, animate,frames=gen, interval=10, repeat=False)
+	else:
+		static(num_steps)
 	plt.show()
 
 if __name__ == "__main__": main()
