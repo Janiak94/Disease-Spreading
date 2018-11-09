@@ -5,18 +5,12 @@ import matplotlib.animation as animation
 import numpy as np
 import argparse as ap
 
-length = 100
-num_agents = 1000
-
-grid = np.ndarray((length,length), dtype=list,order="C")
-for i in range(length):
-	for j in range(length):
-		grid[i,j] = []
+length, num_agents, grid = 0, 0, 0
 agents = []
 susceptible_agents = []
 recovered_agents = []
 infected_agents = []
-fig = plt.figure(figsize=(14,6),dpi=80, facecolor='w', edgecolor='k')
+fig = plt.figure(figsize=(14,6),dpi=80, facecolor="w", edgecolor="k")
 ax1 = fig.add_subplot(1,2,1)
 ax2 = fig.add_subplot(1,2,2)
 num_infected = []
@@ -25,6 +19,7 @@ num_recovered = []
 time = []
 
 class Agent:
+	global length, grid
 	def __init__(self, d, beta, gamma, is_infected, xpos = None, ypos = None):
 		self.d, self.beta, self.gamma = d, beta, gamma
 		if is_infected:
@@ -99,20 +94,17 @@ def animate(i):
 	ax2.set_xlabel("Time steps", fontsize=20)
 	ax2.set_ylabel("Number of agents", fontsize=20)
 	ax2.tick_params(axis='both', which='major', labelsize=12)
-	x = []
-	y = []
+	x, y = [], []
 	for a in susceptible_agents:
 		x.append(a.xpos)
 		y.append(a.ypos)
 	ax1.scatter(x,y,c="b")
-	x = []
-	y = []
+	x, y = [], []
 	for a in infected_agents:
 		x.append(a.xpos)
 		y.append(a.ypos)
 	ax1.scatter(x,y,c="r")
-	x = []
-	y = []
+	x, y = [], []
 	for a in recovered_agents:
 		x.append(a.xpos)
 		y.append(a.ypos)
@@ -141,7 +133,6 @@ def static(num_steps):
 	ax2.set_xlabel("Time steps", fontsize=20)
 	ax2.set_ylabel("Number of agents", fontsize=20)
 	ax2.tick_params(axis='both', which='major', labelsize=12)
-	x, y = [], []
 	for i in gen(num_steps):
 		time.append(i)
 		num_susceptible.append(len(susceptible_agents))
@@ -181,11 +172,14 @@ def gen(num_steps = 1e6):
 	print "no more infected, or asked number of steps"
 
 def main():
+	global length, num_agents, grid
 	print "disease spreading, -h or --help for help message"
 	parser = ap.ArgumentParser(description="disease spreading simulator")
 	parser.add_argument("-d", metavar="d", required=True, help="move probability", type=float)
 	parser.add_argument("-g", metavar="gamma", required=True, help="recovery rate", type=float)
 	parser.add_argument("-b", metavar="beta", required=True, help="infection rate", type=float)
+	parser.add_argument("-N", metavar="agents", required=True, help="number of agents", type=int)
+	parser.add_argument("-l", metavar="length", required=True, help="grid size, lxl", type=int)
 	parser.add_argument("-n", metavar="num_steps", help="number of time steps, if left out will animate", type=int, default="1000000")
 	args = parser.parse_args()
 	global d, gamma, beta
@@ -193,6 +187,8 @@ def main():
 	gamma = args.g
 	beta = args.b
 	num_steps = args.n
+	num_agents = args.N
+	length = args.l
 	if d < 0 or d > 1:
 		print "invalid value of -d arg"
 		return
@@ -205,7 +201,16 @@ def main():
 	if num_steps < 0:
 		print "invalid value of -n arg"
 		return
-
+	if num_agents <= 0:
+		print "invalid value of -N arg"
+		return
+	if length <= 0:
+		print "invalid value of -l arg"
+		return
+	grid = np.ndarray((length,length), dtype=list,order="C")
+	for i in range(length):
+		for j in range(length):
+			grid[i,j] = []
 	for i in range(1,num_agents):
 		agents.append(Agent(d, beta, gamma, False))
 	agents.append(Agent(d, beta, gamma, True, int(length/2), int(length/2)))
