@@ -34,31 +34,38 @@ class Agent:
 			susceptible_agents.append(self)
 			self.xpos = np.random.randint(0,length-1)
 			self.ypos = np.random.randint(0,length-1)
-		grid[self.xpos, self.ypos].append(self)
+		if not self.is_infected and not self.is_recovered:
+			grid[self.xpos][self.ypos].append(self)
 
 	def move(self):
 		if not self.d >= np.random.rand(1): return
-		grid[self.xpos, self.ypos].remove(self)
+		if not self.is_infected and not self.is_recovered:
+			grid[self.xpos][self.ypos].remove(self)
 		has_moved = False
 		while not has_moved:
 			dx = int(np.random.randint(-1,2,1))
-			dy = int(np.random.randint(-1,2,1))
+			if dx == 0:
+				dy = int(np.random.randint(0,2,1))
+				if dy == 0:
+					dy = -1
+				else:
+					dy = 1;
+			else:
+				dy = 0
 			if np.abs(dx) == np.abs(dy):
 				continue
-			for a in agents:
-				if self.xpos + dx == a.xpos and self.ypos + dy == a.ypos:
-					continue
 			if self.xpos + dx < length and self.xpos + dx >= 0 and self.ypos + dy < length and self.ypos + dy >= 0:
 				self.xpos = self.xpos + dx
 				self.ypos = self.ypos + dy
 				has_moved = True
-		grid[self.xpos, self.ypos].append(self)
+		if not self.is_infected and not self.is_recovered:
+			grid[self.xpos][self.ypos].append(self)
 		if self.is_infected:
 			self.infect()
 			self.recover()
 
 	def infect(self):
-		for a in grid[self.xpos, self.ypos]:
+		for a in grid[self.xpos][self.ypos]:
 			if not a.is_recovered and not a.is_infected:
 				if self.beta >= np.random.rand(1):
 					a.is_infected = True
@@ -207,10 +214,10 @@ def main():
 	if length <= 0:
 		print "invalid value of -l arg"
 		return
-	grid = np.ndarray((length,length), dtype=list,order="C")
+	grid = [[0 for i in range(length)] for i in range(length)]
 	for i in range(length):
 		for j in range(length):
-			grid[i,j] = []
+			grid[i][j] = []
 	for i in range(1,num_agents):
 		agents.append(Agent(d, beta, gamma, False))
 	agents.append(Agent(d, beta, gamma, True, int(length/2), int(length/2)))
